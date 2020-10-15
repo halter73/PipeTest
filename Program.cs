@@ -65,7 +65,7 @@ namespace PipeTest
 
                     break;
                 case OperationMode.PipelinesSE:
-                    pipe = new Pipe(new PipeOptions(readerScheduler: PipeScheduler.Inline, writerScheduler: PipeScheduler.Inline));
+                    pipe = new Pipe(new PipeOptions(readerScheduler: PipeScheduler.Inline, writerScheduler: PipeScheduler.Inline, minimumSegmentSize: MinimumBufferSize * 10));
 
                     stopWatch.Start();
                     writeTask = FillPipeSeAsync(sourceStream, pipe.Writer);
@@ -134,7 +134,7 @@ namespace PipeTest
         {
             while (true)
             {
-                var memory = writer.GetMemory(MinimumBufferSize);
+                var memory = writer.GetMemory(MinimumBufferSize * 10);
                 var bytesRead = await strm.ReadAsync(memory);
 
                 if (bytesRead == 0)
