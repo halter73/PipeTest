@@ -54,7 +54,6 @@ namespace PipeTest
             Pipe pipe = null;
             Task readTask = null, writeTask = null;
 
-            stopWatch.Start();
             switch (mode)
             {
                 case OperationMode.Pipelines:
@@ -73,7 +72,7 @@ namespace PipeTest
                     readTask = ReadPipeAsync(destinationStream, pipe.Reader);
                     break;
                 case OperationMode.Custom:
-                    var col = new BlockingCollection<byte[]>(10);
+                    var col = new BlockingCollection<(Memory<byte>, IMemoryOwner<byte>)>(10);
 
                     stopWatch.Start();
                     readTask = ReadStreamAsync(col, sourceStream);
@@ -93,35 +92,35 @@ namespace PipeTest
             Console.WriteLine($"Executed for {stopWatch.ElapsedMilliseconds}ms.");
         }
 
-        static async Task ReadStreamAsync(BlockingCollection<byte[]> col, Stream strm)
+        static async Task ReadStreamAsync(BlockingCollection<(Memory<byte>, IMemoryOwner<byte>)>  col, Stream strm)
         {
             while (true)
             {
-                var memory = ArrayPool<byte>.Shared.Rent(MinimumBufferSize);
+                var memoryOwner = MemoryPool<byte>.Shared.Rent(MinimumBufferSize);
 
-                var bytesRead = await strm.ReadAsync(memory);
+                var bytesRead = await strm.ReadAsync(memoryOwner.Memory);
 
                 if (bytesRead == 0)
                     break;
 
-                col.Add(memory);
+                col.Add((memoryOwner.Memory.Slice(0, bytesRead), memoryOwner));
             }
 
             col.CompleteAdding();
         }
 
-        static async Task WriteStreamAsync(BlockingCollection<byte[]> col, Stream strm)
+        static async Task WriteStreamAsync(BlockingCollection<(Memory<byte>, IMemoryOwner<byte>)>  col, Stream strm)
         {
             while (true)
             {
                 if (col.IsCompleted)
                     break;
 
-                var toWrite = col.Take();
+                var (toWrite, owner) = col.Take();
 
                 await strm.WriteAsync(toWrite);
 
-                ArrayPool<byte>.Shared.Return(toWrite, true);
+                owner.Dispose();
             }
         }
 
