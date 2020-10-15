@@ -57,7 +57,7 @@ namespace PipeTest
             switch (mode)
             {
                 case OperationMode.Pipelines:
-                    pipe = new Pipe();
+                    pipe = new Pipe(new PipeOptions(readerScheduler: PipeScheduler.Inline, writerScheduler: PipeScheduler.Inline));
 
                     stopWatch.Start();
                     writeTask = FillPipeAsync(sourceStream, pipe.Writer);
@@ -65,7 +65,7 @@ namespace PipeTest
 
                     break;
                 case OperationMode.PipelinesSE:
-                    pipe = new Pipe();
+                    pipe = new Pipe(new PipeOptions(readerScheduler: PipeScheduler.Inline, writerScheduler: PipeScheduler.Inline));
 
                     stopWatch.Start();
                     writeTask = FillPipeSeAsync(sourceStream, pipe.Writer);
