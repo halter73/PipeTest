@@ -11,6 +11,7 @@ namespace PipeTest
     class Program
     {
         const int MinimumBufferSize = ushort.MaxValue;
+        const int ConcurrentReads = 10;
 
         enum OperationMode
         {
@@ -72,7 +73,7 @@ namespace PipeTest
                     readTask = ReadPipeAsync(destinationStream, pipe.Reader);
                     break;
                 case OperationMode.Custom:
-                    var col = new BlockingCollection<(Memory<byte>, IMemoryOwner<byte>)>(10);
+                    var col = new BlockingCollection<(Memory<byte>, IMemoryOwner<byte>)>(ConcurrentReads);
 
                     stopWatch.Start();
                     readTask = ReadStreamAsync(col, sourceStream);
@@ -136,15 +137,22 @@ namespace PipeTest
             {
                 var bytesRead = 0;
 
-                for (int i = 0; i < 10; i++)
+                var readTasks = new ValueTask<int>[ConcurrentReads];
+
+                for (int i = 0; i < ConcurrentReads; i++)
                 {
                     var memory = writer.GetMemory(MinimumBufferSize);
-                    bytesRead = await strm.ReadAsync(memory);
+                    readTasks[i] = strm.ReadAsync(memory);
+
+                    writer.Advance(bytesRead);
+                }
+
+                for (int i = 0; i < ConcurrentReads; i++)
+                {
+                    bytesRead = await readTasks[i];
 
                     if (bytesRead == 0)
                         break;
-
-                    writer.Advance(bytesRead);
                 }
 
                 await writer.FlushAsync();
