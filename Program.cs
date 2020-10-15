@@ -134,17 +134,22 @@ namespace PipeTest
         {
             while (true)
             {
-                var memory = writer.GetMemory(MinimumBufferSize);
-                var bytesRead = await strm.ReadAsync(memory);
+                var bytesRead = 0;
+
+                for (int i = 0; i < 10; i++)
+                {
+                    var memory = writer.GetMemory(MinimumBufferSize);
+                    bytesRead = await strm.ReadAsync(memory);
+
+                    if (bytesRead == 0)
+                        break;
+
+                    writer.Advance(bytesRead);
+                }
+
+                await writer.FlushAsync();
 
                 if (bytesRead == 0)
-                    break;
-
-                writer.Advance(bytesRead);
-
-                var result = await writer.FlushAsync();
-
-                if (result.IsCompleted)
                     break;
             }
 
