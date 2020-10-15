@@ -111,16 +111,22 @@ namespace PipeTest
 
         static async Task WriteStreamAsync(BlockingCollection<(Memory<byte>, IMemoryOwner<byte>)>  col, Stream strm)
         {
-            while (true)
+            while (!col.IsCompleted)
             {
-                if (col.IsCompleted)
+                Memory<byte> toWrite;
+                IDisposable owner;
+
+                try
+                {
+                    (toWrite, owner) = col.Take();
+                }
+                catch
+                {
                     break;
+                }
 
-                var (toWrite, owner) = col.Take();
-
+                using var _ = owner;
                 await strm.WriteAsync(toWrite);
-
-                owner.Dispose();
             }
         }
 
